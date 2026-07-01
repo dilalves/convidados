@@ -1,15 +1,77 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Portal dos Convidados</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portal dos Convidados</title>
 </head>
 <body>
 
 <h1>Portal dos Convidados</h1>
+<p>Teste inicial de acesso</p>
 
-<p>Em desenvolvimento...</p>
+<hr>
+
+<h2>1. Verificar CPF</h2>
+
+<input id="cpf" placeholder="Digite seu CPF">
+<button onclick="verificarCpf()">Continuar</button>
+
+<div id="areaFuncional" style="display:none; margin-top:20px;">
+  <h2>2. Localizar cadastro antigo</h2>
+
+  <input id="empresa" placeholder="Empresa. Ex: 1501">
+  <input id="funcional" placeholder="Funcional">
+  <button onclick="localizarFuncional()">Localizar</button>
+</div>
+
+<pre id="resultado" style="margin-top:20px; background:#eee; padding:15px;"></pre>
+
+<script>
+const API_BASE = 'https://apisec.secauxiliar.com.br/convidados';
+
+function mostrar(obj) {
+  document.getElementById('resultado').textContent =
+    JSON.stringify(obj, null, 2);
+}
+
+async function verificarCpf() {
+  const cpf = document.getElementById('cpf').value.trim();
+
+  const resp = await fetch(`${API_BASE}/verificar_acesso.php`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ cpf })
+  });
+
+  const data = await resp.json();
+  mostrar(data);
+
+  if (data.status === 'PEDIR_EMPRESA_FUNCIONAL') {
+    document.getElementById('areaFuncional').style.display = 'block';
+  }
+}
+
+async function localizarFuncional() {
+  const empresa = document.getElementById('empresa').value.trim();
+  const funcional = document.getElementById('funcional').value.trim();
+
+  const resp = await fetch(`${API_BASE}/verificar_acesso.php`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ empresa, funcional })
+  });
+
+  const data = await resp.json();
+  mostrar(data);
+}
+</script>
 
 </body>
 </html>
