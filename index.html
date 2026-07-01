@@ -95,7 +95,7 @@ button{
 }
 button:hover{filter:brightness(1.05)}
 button:disabled{opacity:.65;cursor:default}
-.hidden{display:none}
+.hidden{display:none!important}
 .msg{
   margin-top:14px;
   padding:12px;
@@ -117,6 +117,40 @@ button:disabled{opacity:.65;cursor:default}
   font-size:13px;
   color:var(--muted);
   text-align:center;
+}
+
+/* MODAL */
+.modal{
+  position:fixed;
+  inset:0;
+  background:rgba(15,23,42,.55);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:18px;
+  z-index:99;
+}
+.modalBox{
+  width:100%;
+  max-width:500px;
+  background:#fff;
+  border-radius:16px;
+  padding:24px;
+  box-shadow:0 20px 60px rgba(0,0,0,.25);
+}
+.modalBox h3{
+  margin:0 0 6px;
+  color:var(--primary);
+  font-size:22px;
+}
+.modalBox p{
+  margin:0 0 14px;
+  color:var(--muted);
+  line-height:1.4;
+}
+.btnSec{
+  background:#e5e7eb;
+  color:#111827;
 }
 </style>
 </head>
@@ -140,6 +174,12 @@ button:disabled{opacity:.65;cursor:default}
       <button id="btnCpf">Continuar</button>
     </div>
 
+    <div id="etapaSenha" class="hidden">
+      <label for="senhaLogin">Senha</label>
+      <input id="senhaLogin" type="password" placeholder="Digite sua senha" autocomplete="current-password">
+      <button id="btnLogin">Entrar</button>
+    </div>
+
     <div id="etapaFuncional" class="hidden">
       <label for="empresa">Empresa / unidade</label>
       <input id="empresa" placeholder="Ex.: 1501" inputmode="numeric">
@@ -158,10 +198,43 @@ button:disabled{opacity:.65;cursor:default}
   </section>
 </main>
 
+<div id="modalCadastro" class="modal hidden">
+  <div class="modalBox">
+    <h3 id="modalTitulo">Criar senha</h3>
+    <p id="modalTexto">Confirme seus dados e crie uma senha de acesso.</p>
+
+    <input type="hidden" id="prestador_id">
+
+    <label for="nomeModal">Nome</label>
+    <input id="nomeModal" disabled>
+
+    <label for="cpfModal">CPF</label>
+    <input id="cpfModal" inputmode="numeric" placeholder="Digite seu CPF">
+
+    <label for="emailModal">E-mail</label>
+    <input id="emailModal" type="email" placeholder="seuemail@exemplo.com">
+
+    <label for="celularModal">Celular</label>
+    <input id="celularModal" inputmode="numeric" placeholder="DDD + número">
+
+    <label for="senhaModal">Senha</label>
+    <input id="senhaModal" type="password" placeholder="Mínimo 6 caracteres">
+
+    <label for="confirmaSenhaModal">Confirmar senha</label>
+    <input id="confirmaSenhaModal" type="password" placeholder="Digite novamente">
+
+    <button id="btnSalvarCadastro">Salvar e acessar</button>
+    <button id="btnFecharModal" type="button" class="btnSec">Cancelar</button>
+
+    <div id="retornoModal" class="msg hidden"></div>
+  </div>
+</div>
+
 <script>
 const API_BASE = 'https://apisec.secauxiliar.com.br/prestadores';
 
 const el = id => document.getElementById(id);
+let cpfAtual = '';
 
 function onlyDigits(v){
   return String(v || '').replace(/\D+/g, '');
@@ -176,6 +249,20 @@ function mostrar(texto, tipo='info'){
   box.classList.remove('hidden');
 }
 
+function mostrarModal(texto, tipo='info'){
+  const box = el('retornoModal');
+  box.className = 'msg';
+  if (tipo === 'erro') box.classList.add('erro');
+  if (tipo === 'ok') box.classList.add('ok');
+  box.textContent = texto;
+  box.classList.remove('hidden');
+}
+
+function limparMsg(){
+  el('retorno').classList.add('hidden');
+  el('retornoModal').classList.add('hidden');
+}
+
 async function postJSON(endpoint, payload){
   const r = await fetch(`${API_BASE}/${endpoint}`, {
     method:'POST',
@@ -188,11 +275,47 @@ async function postJSON(endpoint, payload){
   return {r, data};
 }
 
+function abrirModalCadastro(data, modo){
+  limparMsg();
+
+  el('prestador_id').value = data.prestador_id || '';
+  el('nomeModal').value = data.nome || '';
+  el('cpfModal').value = data.cpf || cpfAtual || '';
+  el('emailModal').value = data.email || '';
+  el('celularModal').value = onlyDigits(data.celular || '');
+  el('senhaModal').value = '';
+  el('confirmaSenhaModal').value = '';
+
+  if (modo === 'COMPLETAR_CADASTRO') {
+    el('modalTitulo').textContent = 'Completar cadastro';
+    el('modalTexto').textContent = 'Localizamos seu cadastro antigo. Confirme seus dados e crie sua senha.';
+  } else {
+    el('modalTitulo').textContent = 'Criar senha';
+    el('modalTexto').textContent = 'Cadastro localizado. Confirme seus dados e crie sua senha de acesso.';
+  }
+
+  el('modalCadastro').classList.remove('hidden');
+  setTimeout(() => el('emailModal').focus(), 100);
+}
+
+function fecharModal(){
+  el('modalCadastro').classList.add('hidden');
+}
+
 async function verificarCpf(){
   const cpf = onlyDigits(el('cpf').value);
+  cpfAtual = cpf;
+
+  el('etapaSenha').classList.add('hidden');
+  el('etapaFuncional').classList.add('hidden');
 
   if (!cpf) {
     mostrar('Informe seu CPF.', 'erro');
+    return;
+  }
+
+  if (cpf.length !== 11) {
+    mostrar('Informe um CPF válido com 11 números.', 'erro');
     return;
   }
 
@@ -202,18 +325,21 @@ async function verificarCpf(){
     const {data} = await postJSON('verificar_acesso.php', {cpf});
 
     if (data.status === 'CRIAR_SENHA') {
-      mostrar(`Cadastro encontrado: ${data.nome}. Próximo passo: criar senha.`, 'ok');
+      abrirModalCadastro(data, 'CRIAR_SENHA');
       return;
     }
 
     if (data.status === 'LOGIN') {
-      mostrar('CPF encontrado. Próximo passo: informar senha.', 'ok');
+      mostrar(data.message || 'CPF encontrado. Informe sua senha.', 'ok');
+      el('etapaSenha').classList.remove('hidden');
+      setTimeout(() => el('senhaLogin').focus(), 100);
       return;
     }
 
     if (data.status === 'PEDIR_EMPRESA_FUNCIONAL') {
-      mostrar('CPF não encontrado. Informe empresa/unidade e funcional para localizar seu cadastro antigo.');
+      mostrar(data.message || 'CPF não encontrado. Informe empresa/unidade e funcional para localizar seu cadastro antigo.');
       el('etapaFuncional').classList.remove('hidden');
+      setTimeout(() => el('empresa').focus(), 100);
       return;
     }
 
@@ -224,6 +350,41 @@ async function verificarCpf(){
     mostrar('Erro de rede ou servidor indisponível.', 'erro');
   } finally {
     el('btnCpf').disabled = false;
+  }
+}
+
+async function fazerLogin(){
+  const cpf = cpfAtual || onlyDigits(el('cpf').value);
+  const senha = el('senhaLogin').value;
+
+  if (!cpf || cpf.length !== 11) {
+    mostrar('Informe um CPF válido.', 'erro');
+    return;
+  }
+
+  if (!senha) {
+    mostrar('Informe sua senha.', 'erro');
+    return;
+  }
+
+  el('btnLogin').disabled = true;
+
+  try {
+    const {data} = await postJSON('login.php', {cpf, senha});
+
+    if (!data.ok) {
+      mostrar(data.error || data.message || 'Não foi possível entrar.', 'erro');
+      return;
+    }
+
+    mostrar('Login realizado com sucesso. Redirecionando...', 'ok');
+    window.location.href = 'painel.html';
+
+  } catch (e) {
+    console.error(e);
+    mostrar('Erro de rede ou servidor indisponível.', 'erro');
+  } finally {
+    el('btnLogin').disabled = false;
   }
 }
 
@@ -242,7 +403,7 @@ async function localizarFuncional(){
     const {data} = await postJSON('verificar_acesso.php', {empresa, funcional});
 
     if (data.status === 'COMPLETAR_CADASTRO') {
-      mostrar(`Cadastro localizado: ${data.nome}. Próximo passo: completar dados e criar senha.`, 'ok');
+      abrirModalCadastro(data, 'COMPLETAR_CADASTRO');
       return;
     }
 
@@ -256,8 +417,88 @@ async function localizarFuncional(){
   }
 }
 
+async function salvarCadastro(){
+  const payload = {
+    prestador_id: Number(el('prestador_id').value || 0),
+    cpf: onlyDigits(el('cpfModal').value),
+    email: el('emailModal').value.trim(),
+    celular: onlyDigits(el('celularModal').value),
+    senha: el('senhaModal').value,
+    confirma_senha: el('confirmaSenhaModal').value
+  };
+
+  if (!payload.prestador_id) {
+    mostrarModal('Prestador inválido.', 'erro');
+    return;
+  }
+
+  if (!payload.cpf || payload.cpf.length !== 11) {
+    mostrarModal('Informe um CPF válido.', 'erro');
+    return;
+  }
+
+  if (!payload.email) {
+    mostrarModal('Informe um e-mail válido.', 'erro');
+    return;
+  }
+
+  if (!payload.celular || payload.celular.length < 10) {
+    mostrarModal('Informe um celular válido com DDD.', 'erro');
+    return;
+  }
+
+  if (!payload.senha || payload.senha.length < 6) {
+    mostrarModal('A senha deve ter pelo menos 6 caracteres.', 'erro');
+    return;
+  }
+
+  if (payload.senha !== payload.confirma_senha) {
+    mostrarModal('As senhas não conferem.', 'erro');
+    return;
+  }
+
+  el('btnSalvarCadastro').disabled = true;
+
+  try {
+    const {data} = await postJSON('salvar_senha.php', payload);
+
+    if (!data.ok) {
+      mostrarModal(data.error || data.message || 'Não foi possível salvar.', 'erro');
+      return;
+    }
+
+    mostrarModal('Cadastro salvo com sucesso. Redirecionando...', 'ok');
+    window.location.href = 'painel.html';
+
+  } catch (e) {
+    console.error(e);
+    mostrarModal('Erro de rede ou servidor indisponível.', 'erro');
+  } finally {
+    el('btnSalvarCadastro').disabled = false;
+  }
+}
+
 el('btnCpf').onclick = verificarCpf;
+el('btnLogin').onclick = fazerLogin;
 el('btnFuncional').onclick = localizarFuncional;
+el('btnSalvarCadastro').onclick = salvarCadastro;
+el('btnFecharModal').onclick = fecharModal;
+
+el('cpf').addEventListener('keydown', e => {
+  if (e.key === 'Enter') verificarCpf();
+});
+
+el('senhaLogin').addEventListener('keydown', e => {
+  if (e.key === 'Enter') fazerLogin();
+});
+
+el('funcional').addEventListener('keydown', e => {
+  if (e.key === 'Enter') localizarFuncional();
+});
+
+el('confirmaSenhaModal').addEventListener('keydown', e => {
+  if (e.key === 'Enter') salvarCadastro();
+});
 </script>
 </body>
 </html>
