@@ -1,77 +1,263 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Portal dos Convidados</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" type="image/x-icon" href="https://www.curso-objetivo.br/assets/img/favicon.ico">
+<title>Portal dos Convidados — Curso Objetivo</title>
+
+<style>
+:root{
+  --bg:#f7f8fb;
+  --card:#ffffff;
+  --line:#e5e7eb;
+  --ink:#0f172a;
+  --muted:#6b7280;
+  --primary:#0b3b78;
+  --accent:#2563eb;
+  --danger:#b91c1c;
+  --success:#166534;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:system-ui,Arial,sans-serif;
+  background:var(--bg);
+  color:var(--ink);
+}
+header.topbar{
+  height:68px;
+  background:var(--primary);
+  color:#fff;
+  display:flex;
+  align-items:center;
+  padding:0 24px;
+  box-shadow:0 2px 10px rgba(16,24,40,.16);
+}
+header.topbar img{
+  height:32px;
+  margin-right:14px;
+}
+header.topbar h1{
+  font-size:18px;
+  margin:0;
+  font-weight:650;
+}
+main{
+  min-height:calc(100vh - 68px);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:28px 16px;
+}
+.card{
+  width:100%;
+  max-width:460px;
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:26px;
+  box-shadow:0 12px 34px rgba(15,23,42,.08);
+}
+.card h2{
+  margin:0 0 8px;
+  font-size:24px;
+  color:var(--primary);
+}
+.card p{
+  margin:0 0 22px;
+  color:var(--muted);
+  line-height:1.45;
+}
+label{
+  display:block;
+  font-size:14px;
+  font-weight:600;
+  margin:14px 0 6px;
+}
+input{
+  width:100%;
+  padding:12px 13px;
+  border-radius:10px;
+  border:1px solid #d1d5db;
+  font-size:15px;
+}
+button{
+  width:100%;
+  margin-top:18px;
+  padding:13px 16px;
+  border:0;
+  border-radius:10px;
+  background:var(--accent);
+  color:#fff;
+  font-weight:700;
+  cursor:pointer;
+}
+button:hover{filter:brightness(1.05)}
+button:disabled{opacity:.65;cursor:default}
+.hidden{display:none}
+.msg{
+  margin-top:14px;
+  padding:12px;
+  border-radius:10px;
+  background:#eef2ff;
+  color:#1e3a8a;
+  font-size:14px;
+}
+.msg.erro{
+  background:#fee2e2;
+  color:var(--danger);
+}
+.msg.ok{
+  background:#dcfce7;
+  color:var(--success);
+}
+.small{
+  margin-top:18px;
+  font-size:13px;
+  color:var(--muted);
+  text-align:center;
+}
+</style>
 </head>
+
 <body>
+<header class="topbar">
+  <img src="logo-mini.png" alt="Curso Objetivo">
+  <h1>Portal dos Convidados</h1>
+</header>
 
-<h1>Portal dos Convidados</h1>
-<p>Teste inicial de acesso</p>
+<main>
+  <section class="card">
+    <h2>Acesso ao Portal</h2>
+    <p>
+      Área exclusiva para convidados e prestadores que participaram de eventos avulsos do Curso Objetivo.
+    </p>
 
-<hr>
+    <div id="etapaCpf">
+      <label for="cpf">CPF</label>
+      <input id="cpf" placeholder="Digite seu CPF" inputmode="numeric" autocomplete="username">
+      <button id="btnCpf">Continuar</button>
+    </div>
 
-<h2>1. Verificar CPF</h2>
+    <div id="etapaFuncional" class="hidden">
+      <label for="empresa">Empresa / unidade</label>
+      <input id="empresa" placeholder="Ex.: 1501" inputmode="numeric">
 
-<input id="cpf" placeholder="Digite seu CPF">
-<button onclick="verificarCpf()">Continuar</button>
+      <label for="funcional">Funcional</label>
+      <input id="funcional" placeholder="Digite seu funcional" inputmode="numeric">
 
-<div id="areaFuncional" style="display:none; margin-top:20px;">
-  <h2>2. Localizar cadastro antigo</h2>
+      <button id="btnFuncional">Localizar cadastro</button>
+    </div>
 
-  <input id="empresa" placeholder="Empresa. Ex: 1501">
-  <input id="funcional" placeholder="Funcional">
-  <button onclick="localizarFuncional()">Localizar</button>
-</div>
+    <div id="retorno" class="msg hidden"></div>
 
-<pre id="resultado" style="margin-top:20px; background:#eee; padding:15px;"></pre>
+    <div class="small">
+      Primeiro acesso? Informe seu CPF para localizar seu cadastro.
+    </div>
+  </section>
+</main>
 
 <script>
 const API_BASE = 'https://apisec.secauxiliar.com.br/prestadores';
 
-function mostrar(obj) {
-  document.getElementById('resultado').textContent =
-    JSON.stringify(obj, null, 2);
+const el = id => document.getElementById(id);
+
+function onlyDigits(v){
+  return String(v || '').replace(/\D+/g, '');
 }
 
-async function verificarCpf() {
-  const cpf = document.getElementById('cpf').value.trim();
+function mostrar(texto, tipo='info'){
+  const box = el('retorno');
+  box.className = 'msg';
+  if (tipo === 'erro') box.classList.add('erro');
+  if (tipo === 'ok') box.classList.add('ok');
+  box.textContent = texto;
+  box.classList.remove('hidden');
+}
 
-  const resp = await fetch(`${API_BASE}/verificar_acesso.php`, {
-    method: 'POST',
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ cpf })
+async function postJSON(endpoint, payload){
+  const r = await fetch(`${API_BASE}/${endpoint}`, {
+    method:'POST',
+    credentials:'include',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(payload)
   });
 
-  const data = await resp.json();
-  mostrar(data);
+  const data = await r.json();
+  return {r, data};
+}
 
-  if (data.status === 'PEDIR_EMPRESA_FUNCIONAL') {
-    document.getElementById('areaFuncional').style.display = 'block';
+async function verificarCpf(){
+  const cpf = onlyDigits(el('cpf').value);
+
+  if (!cpf) {
+    mostrar('Informe seu CPF.', 'erro');
+    return;
+  }
+
+  el('btnCpf').disabled = true;
+
+  try {
+    const {data} = await postJSON('verificar_acesso.php', {cpf});
+
+    if (data.status === 'CRIAR_SENHA') {
+      mostrar(`Cadastro encontrado: ${data.nome}. Próximo passo: criar senha.`, 'ok');
+      return;
+    }
+
+    if (data.status === 'LOGIN') {
+      mostrar('CPF encontrado. Próximo passo: informar senha.', 'ok');
+      return;
+    }
+
+    if (data.status === 'PEDIR_EMPRESA_FUNCIONAL') {
+      mostrar('CPF não encontrado. Informe empresa/unidade e funcional para localizar seu cadastro antigo.');
+      el('etapaFuncional').classList.remove('hidden');
+      return;
+    }
+
+    mostrar(data.message || data.error || 'Não foi possível verificar o CPF.', 'erro');
+
+  } catch (e) {
+    console.error(e);
+    mostrar('Erro de rede ou servidor indisponível.', 'erro');
+  } finally {
+    el('btnCpf').disabled = false;
   }
 }
 
-async function localizarFuncional() {
-  const empresa = document.getElementById('empresa').value.trim();
-  const funcional = document.getElementById('funcional').value.trim();
+async function localizarFuncional(){
+  const empresa = onlyDigits(el('empresa').value);
+  const funcional = onlyDigits(el('funcional').value);
 
-  const resp = await fetch(`${API_BASE}/verificar_acesso.php`, {
-    method: 'POST',
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ empresa, funcional })
-  });
+  if (!empresa || !funcional) {
+    mostrar('Informe empresa/unidade e funcional.', 'erro');
+    return;
+  }
 
-  const data = await resp.json();
-  mostrar(data);
+  el('btnFuncional').disabled = true;
+
+  try {
+    const {data} = await postJSON('verificar_acesso.php', {empresa, funcional});
+
+    if (data.status === 'COMPLETAR_CADASTRO') {
+      mostrar(`Cadastro localizado: ${data.nome}. Próximo passo: completar dados e criar senha.`, 'ok');
+      return;
+    }
+
+    mostrar(data.message || data.error || 'Cadastro não encontrado.', 'erro');
+
+  } catch (e) {
+    console.error(e);
+    mostrar('Erro de rede ou servidor indisponível.', 'erro');
+  } finally {
+    el('btnFuncional').disabled = false;
+  }
 }
-</script>
 
+el('btnCpf').onclick = verificarCpf;
+el('btnFuncional').onclick = localizarFuncional;
+</script>
 </body>
 </html>
