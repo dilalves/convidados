@@ -5,7 +5,7 @@
 <title>Histórico de Pagamentos</title>
 <style>
 :root{--line:#dbe6f3;--primary:#0b3b78;--muted:#64748b;--soft:#eef4fb;--ok:#067647;--danger:#b42318;--warn:#b54708;--blue:#175cd3}
-*{box-sizing:border-box}body{margin:0;font-family:system-ui,Arial,sans-serif;background:#fff;color:#0f172a;padding:18px}.top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}h1{font-size:22px;margin:0;color:var(--primary)}.muted{color:var(--muted)}.btn{border:0;border-radius:10px;padding:10px 14px;font-weight:850;cursor:pointer;background:#e8f0fb;color:#12345b}.btn.primary{background:var(--primary);color:#fff}.tablewrap{border:1px solid var(--line);border-radius:14px;overflow:auto;max-height:calc(100vh - 105px)}table{width:100%;border-collapse:collapse;font-size:13px;min-width:1050px}th,td{border-bottom:1px solid var(--line);padding:9px;text-align:left;white-space:nowrap}th{position:sticky;top:0;background:var(--soft);color:#12345b;z-index:2;font-size:12px}tr:hover td{background:#f8fbff}.right{text-align:right}.center{text-align:center}.pill{display:inline-flex;border-radius:999px;padding:3px 8px;font-size:12px;font-weight:900}.pill.ok{background:#e8f7ef;color:#05603a}.pill.neg{background:#fde8e8;color:#8b2c2c}.pill.dp{background:#fff3cd;color:#b54708}.pill.pg{background:#dbeafe;color:#175cd3}.msg{padding:14px;border-radius:12px;background:#eef4fb;color:#12345b;font-weight:700}.err{background:#fff1f0;color:#8a1f17;border:1px solid #fecdca}@media(max-width:800px){.top{flex-direction:column}.tablewrap{max-height:none}}</style>
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,Arial,sans-serif;background:#fff;color:#0f172a;padding:18px}.top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}h1{font-size:22px;margin:0;color:var(--primary)}.muted{color:var(--muted)}.btn{border:0;border-radius:10px;padding:10px 14px;font-weight:850;cursor:pointer;background:#e8f0fb;color:#12345b}.btn.primary{background:var(--primary);color:#fff}.tablewrap{border:1px solid var(--line);border-radius:14px;overflow:auto;max-height:calc(100vh - 105px)}table{width:100%;border-collapse:collapse;font-size:13px;min-width:1080px}th,td{border-bottom:1px solid var(--line);padding:9px;text-align:left;white-space:nowrap}th{position:sticky;top:0;background:var(--soft);color:#12345b;z-index:2;font-size:12px}tr:hover td{background:#f8fbff}.right{text-align:right}.center{text-align:center}.pill{display:inline-flex;border-radius:999px;padding:3px 8px;font-size:12px;font-weight:900}.pill.ok{background:#e8f7ef;color:#05603a}.pill.neg{background:#fde8e8;color:#8b2c2c}.pill.dp{background:#fff3cd;color:#b54708}.pill.pg{background:#dbeafe;color:#175cd3}.pill.holerite{background:#f1f5f9;color:#475569}.msg{padding:14px;border-radius:12px;background:#eef4fb;color:#12345b;font-weight:700}.err{background:#fff1f0;color:#8a1f17;border:1px solid #fecdca}@media(max-width:800px){.top{flex-direction:column}.tablewrap{max-height:none}}</style>
 </head>
 <body>
 <div class="top"><div><h1>Histórico de Pagamentos</h1><div class="muted" id="sub">Carregando seus lançamentos...</div></div><button class="btn" onclick="carregar()">Atualizar</button></div>
@@ -16,17 +16,24 @@ function moeda(v){return Number(v||0).toLocaleString('pt-BR',{style:'currency',c
 function dataBR(d){if(!d)return ''; const s=String(d).slice(0,10); const m=s.match(/^(\d{4})-(\d{2})-(\d{2})$/); return m?`${m[3]}/${m[2]}/${m[1]}`:s}
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
 function statusPedido(p){ if(p.data_recibo) return ['PG','pg']; if(p.data_envio) return ['DP','dp']; return Number(p.liberado) ? ['OK','ok'] : ['NEG','neg']; }
+function reciboColuna(p){
+  if(!p.data_recibo) return '-';
+  if(String(p.tipo_pagamento||'').toUpperCase()==='HOLERITE') return '<span class="pill holerite">Holerite</span>';
+  if(Number(p.tem_recibo||0)===1) return `<button class="btn primary" onclick="abrirRecibo('${esc(String(p.data_recibo).slice(0,10))}')">Recibo</button>`;
+  return '-';
+}
+function abrirRecibo(data){ window.open(API_BASE+'recibo_pdf.php?data_recibo='+encodeURIComponent(data),'_blank'); }
 async function carregar(){
   const box=document.getElementById('conteudo'); box.className='msg'; box.textContent='Carregando...';
   try{
     const r=await fetch(API_BASE+'historico_pagamentos.php',{credentials:'include',cache:'no-store'});
     const j=await r.json();
     if(!r.ok || !j.ok) throw new Error(j.error||j.msg||'Erro ao carregar histórico.');
-    const pedidos=j.pedidos||[]; const resumo=j.resumo||{};
+    const pedidos=j.pedidos||[];
     document.getElementById('sub').textContent=pedidos.length?`${pedidos.length} lançamento(s), em ordem decrescente de data.`:'Nenhum lançamento encontrado.';
     if(!pedidos.length){ box.className='msg'; box.textContent='Nenhum pagamento lançado para seu cadastro.'; return; }
     box.className='tablewrap';
-    box.innerHTML=`<table><thead><tr><th>Data</th><th>Cód.</th><th>Evento</th><th>Unid.</th><th>Função</th><th class="center">Qtd</th><th class="right">Bruto</th><th class="right">Descontos</th><th class="right">Líquido</th><th class="center">Status</th><th class="center">Recibo</th></tr></thead><tbody>${pedidos.map(p=>{const st=statusPedido(p); const descontos=Number(p.valor_iss||0)+Number(p.valor_inss||0)+Number(p.valor_ir||0); return `<tr><td>${esc(dataBR(p.data_evento))}</td><td>${esc(p.codigo_evento||'')}</td><td>${esc(p.evento_nome||'')}</td><td>${esc(p.id_unidade||'')}</td><td>${esc(p.funcao||'')}</td><td class="center">${esc(p.quantidade||'')}</td><td class="right"><b>${moeda(p.valor_bruto)}</b></td><td class="right">${moeda(descontos)}</td><td class="right"><b>${moeda(p.valor_liquido||p.valor_bruto)}</b></td><td class="center"><span class="pill ${st[1]}">${st[0]}</span></td><td class="center">${p.data_recibo?'<button class="btn" disabled>Em breve</button>':'-'}</td></tr>`}).join('')}</tbody></table>`;
+    box.innerHTML=`<table><thead><tr><th>Data</th><th>Cód.</th><th>Evento</th><th>Unid.</th><th>Função</th><th class="center">Qtd</th><th class="right">Bruto</th><th class="right">Descontos</th><th class="right">Líquido</th><th class="center">Status</th><th class="center">Recibo</th></tr></thead><tbody>${pedidos.map(p=>{const st=statusPedido(p); const descontos=Number(p.valor_iss||0)+Number(p.valor_inss||0)+Number(p.valor_ir||0); return `<tr><td>${esc(dataBR(p.data_evento))}</td><td>${esc(p.codigo_evento||'')}</td><td>${esc(p.evento_nome||'')}</td><td>${esc(p.id_unidade||'')}</td><td>${esc(p.funcao||'')}</td><td class="center">${esc(p.quantidade||'')}</td><td class="right"><b>${moeda(p.valor_bruto)}</b></td><td class="right">${moeda(descontos)}</td><td class="right"><b>${moeda(p.valor_liquido||p.valor_bruto)}</b></td><td class="center"><span class="pill ${st[1]}">${st[0]}</span></td><td class="center">${reciboColuna(p)}</td></tr>`}).join('')}</tbody></table>`;
   }catch(e){ box.className='msg err'; box.textContent=e.message; }
 }
 carregar();

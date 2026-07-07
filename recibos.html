@@ -1,1 +1,63 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><style>body{font-family:system-ui,Arial,sans-serif;margin:0;padding:22px;color:#0f172a}h1{color:#0b3b78}.box{border:1px solid #dbe6f3;border-radius:14px;padding:18px;background:#eef4fb;color:#12345b;font-weight:700}</style></head><body><h1>Recibos</h1><div class="box">Tela em construção. Próxima etapa: listar pagamentos com data de recibo e gerar PDF.</div></body></html>
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Recibos</title>
+<style>
+:root{--line:#dbe6f3;--primary:#0b3b78;--muted:#64748b;--soft:#eef4fb;--danger:#b42318;--ok:#067647;--blue:#175cd3;--warn:#b54708}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,Arial,sans-serif;background:#fff;color:#0f172a;padding:18px;height:100vh;overflow:hidden}
+.wrap{height:100%;display:flex;flex-direction:column;gap:12px}.top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-shrink:0}h1{font-size:22px;margin:0;color:var(--primary);line-height:1.1}.muted{color:var(--muted)}.btn{border:0;border-radius:10px;padding:10px 14px;font-weight:850;cursor:pointer;background:#e8f0fb;color:#12345b}.btn.primary{background:var(--primary);color:#fff}.btn:disabled{opacity:.55;cursor:not-allowed}.info{border:1px solid #bfdbfe;background:#eff6ff;color:#12345b;border-radius:12px;padding:10px 12px;font-weight:750;line-height:1.35;flex-shrink:0}.tablewrap{border:1px solid var(--line);border-radius:14px;overflow:auto;flex:1;min-height:0}table{width:100%;border-collapse:collapse;font-size:13px;min-width:980px}th,td{border-bottom:1px solid var(--line);padding:10px;text-align:left;white-space:nowrap}th{position:sticky;top:0;background:var(--soft);color:#12345b;z-index:2;font-size:12px}tr:hover td{background:#f8fbff}.right{text-align:right}.center{text-align:center}.pill{display:inline-flex;border-radius:999px;padding:3px 8px;font-size:12px;font-weight:900;background:#dbeafe;color:#175cd3}.msg{padding:14px;border-radius:12px;background:#eef4fb;color:#12345b;font-weight:700}.err{background:#fff1f0;color:#8a1f17;border:1px solid #fecdca}.empty{border:1px dashed var(--line);border-radius:14px;padding:18px;color:var(--muted);line-height:1.45}.filter{display:flex;gap:8px;align-items:end;flex-wrap:wrap;flex-shrink:0}.filter label{display:block;font-size:11px;color:#64748b;text-transform:uppercase;font-weight:900;margin-bottom:4px}.filter input{border:1px solid var(--line);border-radius:10px;padding:9px;font-size:14px}@media(max-width:800px){body{height:auto;overflow:auto}.top{flex-direction:column}.tablewrap{max-height:none}.btn{width:100%}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div><h1>Recibos</h1><div class="muted" id="sub">Carregando recibos disponíveis...</div></div>
+    <button class="btn" onclick="carregar()">Atualizar</button>
+  </div>
+
+  <div class="info">
+    Recibos são agrupados pela data de pagamento. Pagamentos enviados para holerite não aparecem nesta tela.
+  </div>
+
+  <div class="filter">
+    <div><label>Filtrar por data de pagamento</label><input id="filtroData" type="date" onchange="render()"></div>
+    <button class="btn" onclick="limparFiltro()">Limpar filtro</button>
+  </div>
+
+  <div id="conteudo" class="msg">Carregando...</div>
+</div>
+
+<script>
+const API_BASE='https://apisec.secauxiliar.com.br/prestadores/';
+let recibos=[];
+function moeda(v){return Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}
+function dataBR(d){if(!d)return ''; const s=String(d).slice(0,10); const m=s.match(/^(\d{4})-(\d{2})-(\d{2})$/); return m?`${m[3]}/${m[2]}/${m[1]}`:s}
+function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+function periodo(r){ const a=dataBR(r.primeira_data_evento); const b=dataBR(r.ultima_data_evento); if(!a && !b) return '-'; return a===b ? a : `${a} a ${b}`; }
+function abrirRecibo(data){ window.open(API_BASE+'recibo_pdf.php?data_recibo='+encodeURIComponent(data), '_blank'); }
+function limparFiltro(){ document.getElementById('filtroData').value=''; render(); }
+async function carregar(){
+  const box=document.getElementById('conteudo'); box.className='msg'; box.textContent='Carregando...';
+  try{
+    const r=await fetch(API_BASE+'recibos_listar.php',{credentials:'include',cache:'no-store'});
+    const j=await r.json();
+    if(!r.ok || !j.ok) throw new Error(j.error||j.msg||'Erro ao carregar recibos.');
+    recibos=j.recibos||[];
+    render();
+  }catch(e){ box.className='msg err'; box.textContent=e.message; }
+}
+function render(){
+  const box=document.getElementById('conteudo');
+  const filtro=document.getElementById('filtroData').value;
+  const rows=filtro ? recibos.filter(r=>String(r.data_recibo).slice(0,10)===filtro) : recibos;
+  document.getElementById('sub').textContent=recibos.length?`${recibos.length} recibo(s) disponível(is).`:'Nenhum recibo disponível.';
+  if(!rows.length){ box.className='empty'; box.innerHTML=filtro?'Nenhum recibo encontrado para a data selecionada.':'Nenhum recibo disponível no momento.<br>Pagamentos lançados em holerite não geram recibo neste portal.'; return; }
+  box.className='tablewrap';
+  box.innerHTML=`<table><thead><tr><th>Data pagamento</th><th>Período dos eventos</th><th class="center">Pedidos</th><th class="right">Bruto</th><th class="right">Descontos</th><th class="right">Líquido</th><th class="center">Status</th><th class="center">Recibo</th></tr></thead><tbody>${rows.map(r=>{const desc=Number(r.total_iss||0)+Number(r.total_inss||0)+Number(r.total_ir||0); return `<tr><td><b>${esc(dataBR(r.data_recibo))}</b></td><td>${esc(periodo(r))}</td><td class="center">${esc(r.qtd_pedidos||0)}</td><td class="right"><b>${moeda(r.total_bruto)}</b></td><td class="right">${moeda(desc)}</td><td class="right"><b>${moeda(r.total_liquido)}</b></td><td class="center"><span class="pill">Disponível</span></td><td class="center"><button class="btn primary" onclick="abrirRecibo('${esc(String(r.data_recibo).slice(0,10))}')">Abrir recibo</button></td></tr>`}).join('')}</tbody></table>`;
+}
+carregar();
+</script>
+</body>
+</html>
