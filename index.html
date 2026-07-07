@@ -152,6 +152,13 @@ button:disabled{opacity:.65;cursor:default}
   background:#e5e7eb;
   color:#111827;
 }
+.btnLink{
+  background:#fff;
+  color:var(--primary);
+  border:1px solid #dbe6f3;
+  margin-top:10px;
+}
+.btnLink:hover{background:#eef4fb;filter:none}
 </style>
 </head>
 
@@ -178,6 +185,7 @@ button:disabled{opacity:.65;cursor:default}
       <label for="senhaLogin">Senha</label>
       <input id="senhaLogin" type="password" placeholder="Digite sua senha" autocomplete="current-password">
       <button id="btnLogin">Entrar</button>
+      <button id="btnEsqueciSenha" type="button" class="btnLink hidden">Esqueci minha senha</button>
     </div>
 
     <div id="etapaFuncional" class="hidden">
@@ -308,6 +316,7 @@ async function verificarCpf(){
 
   el('etapaSenha').classList.add('hidden');
   el('etapaFuncional').classList.add('hidden');
+  el('btnEsqueciSenha').classList.add('hidden');
 
   if (!cpf) {
     mostrar('Informe seu CPF.', 'erro');
@@ -332,6 +341,7 @@ async function verificarCpf(){
     if (data.status === 'LOGIN') {
       mostrar(data.message || 'CPF encontrado. Informe sua senha.', 'ok');
       el('etapaSenha').classList.remove('hidden');
+      el('btnEsqueciSenha').classList.add('hidden');
       setTimeout(() => el('senhaLogin').focus(), 100);
       return;
     }
@@ -374,6 +384,7 @@ async function fazerLogin(){
 
     if (!data.ok) {
       mostrar(data.error || data.message || 'Não foi possível entrar.', 'erro');
+      el('btnEsqueciSenha').classList.remove('hidden');
       return;
     }
 
@@ -385,6 +396,34 @@ async function fazerLogin(){
     mostrar('Erro de rede ou servidor indisponível.', 'erro');
   } finally {
     el('btnLogin').disabled = false;
+  }
+}
+
+
+async function esqueciSenha(){
+  const cpf = cpfAtual || onlyDigits(el('cpf').value);
+
+  if (!cpf || cpf.length !== 11) {
+    mostrar('Informe um CPF válido para recuperar sua senha.', 'erro');
+    return;
+  }
+
+  el('btnEsqueciSenha').disabled = true;
+
+  try {
+    const {data} = await postJSON('esqueci_senha.php', {cpf});
+
+    if (!data.ok) {
+      mostrar(data.error || data.message || 'Não foi possível solicitar a troca de senha.', 'erro');
+      return;
+    }
+
+    mostrar(data.message || 'Enviamos as instruções para o e-mail cadastrado.', 'ok');
+  } catch (e) {
+    console.error(e);
+    mostrar('Erro de rede ou servidor indisponível.', 'erro');
+  } finally {
+    el('btnEsqueciSenha').disabled = false;
   }
 }
 
@@ -480,6 +519,7 @@ async function salvarCadastro(){
 
 el('btnCpf').onclick = verificarCpf;
 el('btnLogin').onclick = fazerLogin;
+el('btnEsqueciSenha').onclick = esqueciSenha;
 el('btnFuncional').onclick = localizarFuncional;
 el('btnSalvarCadastro').onclick = salvarCadastro;
 el('btnFecharModal').onclick = fecharModal;

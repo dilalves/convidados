@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" type="image/x-icon" href="https://www.curso-objetivo.br/assets/img/favicon.ico">
+<title>Redefinir senha - Curso Objetivo</title>
+<style>
+:root{--bg:#f7f8fb;--card:#fff;--line:#e5e7eb;--ink:#0f172a;--muted:#6b7280;--primary:#0b3b78;--accent:#2563eb;--danger:#b91c1c;--success:#166534}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+header.topbar{height:68px;background:var(--primary);color:#fff;display:flex;align-items:center;padding:0 24px;box-shadow:0 2px 10px rgba(16,24,40,.16)}
+header.topbar img{height:32px;margin-right:14px}header.topbar h1{font-size:18px;margin:0;font-weight:650}
+main{min-height:calc(100vh - 68px);display:flex;align-items:center;justify-content:center;padding:28px 16px}
+.card{width:100%;max-width:460px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:26px;box-shadow:0 12px 34px rgba(15,23,42,.08)}
+h2{margin:0 0 8px;font-size:24px;color:var(--primary)}p{margin:0 0 22px;color:var(--muted);line-height:1.45}
+label{display:block;font-size:14px;font-weight:600;margin:14px 0 6px}input{width:100%;padding:12px 13px;border-radius:10px;border:1px solid #d1d5db;font-size:15px}
+button{width:100%;margin-top:18px;padding:13px 16px;border:0;border-radius:10px;background:var(--accent);color:#fff;font-weight:700;cursor:pointer}button:disabled{opacity:.65;cursor:default}.btnSec{background:#e5e7eb;color:#111827}.hidden{display:none!important}
+.msg{margin-top:14px;padding:12px;border-radius:10px;background:#eef2ff;color:#1e3a8a;font-size:14px}.msg.erro{background:#fee2e2;color:var(--danger)}.msg.ok{background:#dcfce7;color:var(--success)}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <img src="logo-mini.png" alt="Curso Objetivo">
+  <h1>Curso Objetivo - Eventos e Coberturas</h1>
+</header>
+<main>
+  <section class="card">
+    <h2>Redefinir senha</h2>
+    <p>Informe sua nova senha de acesso ao portal.</p>
+
+    <label for="senha">Nova senha</label>
+    <input id="senha" type="password" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
+
+    <label for="confirma">Confirmar nova senha</label>
+    <input id="confirma" type="password" placeholder="Digite novamente" autocomplete="new-password">
+
+    <button id="btnSalvar">Salvar nova senha</button>
+    <button id="btnVoltar" type="button" class="btnSec">Voltar ao login</button>
+
+    <div id="retorno" class="msg hidden"></div>
+  </section>
+</main>
+<script>
+const API_BASE = 'https://apisec.secauxiliar.com.br/prestadores';
+const el = id => document.getElementById(id);
+const params = new URLSearchParams(location.search);
+const token = params.get('token') || '';
+
+function mostrar(texto, tipo='info'){
+  const box = el('retorno');
+  box.className = 'msg';
+  if(tipo === 'erro') box.classList.add('erro');
+  if(tipo === 'ok') box.classList.add('ok');
+  box.textContent = texto;
+  box.classList.remove('hidden');
+}
+
+async function salvar(){
+  const senha = el('senha').value;
+  const confirma_senha = el('confirma').value;
+
+  if(!token){ mostrar('Link inválido ou incompleto.', 'erro'); return; }
+  if(!senha || senha.length < 6){ mostrar('A senha deve ter pelo menos 6 caracteres.', 'erro'); return; }
+  if(senha !== confirma_senha){ mostrar('As senhas não conferem.', 'erro'); return; }
+
+  el('btnSalvar').disabled = true;
+
+  try{
+    const r = await fetch(`${API_BASE}/redefinir_senha_salvar.php`, {
+      method:'POST',
+      credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({token, senha, confirma_senha})
+    });
+    const data = await r.json();
+
+    if(!data.ok){
+      mostrar(data.error || data.message || 'Não foi possível salvar a nova senha.', 'erro');
+      return;
+    }
+
+    mostrar('Senha alterada com sucesso. Redirecionando...', 'ok');
+    setTimeout(()=>{ window.location.href = 'painel.html'; }, 900);
+  }catch(e){
+    console.error(e);
+    mostrar('Erro de rede ou servidor indisponível.', 'erro');
+  }finally{
+    el('btnSalvar').disabled = false;
+  }
+}
+
+el('btnSalvar').onclick = salvar;
+el('btnVoltar').onclick = () => window.location.href = 'index.html';
+el('confirma').addEventListener('keydown', e => { if(e.key === 'Enter') salvar(); });
+
+if(!token){ mostrar('Link inválido ou incompleto. Solicite uma nova troca de senha.', 'erro'); }
+</script>
+</body>
+</html>
