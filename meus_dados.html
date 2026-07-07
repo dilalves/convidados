@@ -1,1 +1,115 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><style>body{font-family:system-ui,Arial,sans-serif;margin:0;padding:22px;color:#0f172a}h1{color:#0b3b78}.box{border:1px solid #dbe6f3;border-radius:14px;padding:18px;background:#eef4fb;color:#12345b;font-weight:700}</style></head><body><h1>Meus Dados</h1><div class="box">Tela em construção. Próxima etapa: consulta e atualização cadastral.</div></body></html>
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Meus Dados</title>
+<style>
+:root{--bg:#f7f8fb;--card:#fff;--line:#dbe6f3;--ink:#0f172a;--muted:#64748b;--primary:#0b3b78;--soft:#eef4fb;--danger:#b91c1c;--ok:#067647}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,Arial,sans-serif;background:#fff;color:var(--ink);padding:18px;height:100vh;overflow:hidden}
+.wrap{height:100%;display:flex;flex-direction:column;gap:12px}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-shrink:0}
+h1{margin:0;color:var(--primary);font-size:24px}.sub{color:var(--muted);margin-top:4px}.btn{border:0;border-radius:10px;background:#e8f0fb;color:#12345b;font-weight:900;padding:10px 14px;cursor:pointer}
+.alert{border:1px solid #f5d0a9;background:#fff7ed;color:#9a3412;border-radius:12px;padding:12px 14px;font-weight:750;line-height:1.4;flex-shrink:0}
+.card{border:1px solid var(--line);border-radius:16px;background:#fff;box-shadow:0 8px 24px rgba(11,59,120,.05);overflow:hidden;min-height:0;flex:1;display:flex;flex-direction:column}
+.cardhead{background:var(--soft);border-bottom:1px solid var(--line);padding:12px 14px;display:flex;justify-content:space-between;gap:10px;align-items:center;flex-shrink:0}.cardhead h2{margin:0;color:#12345b;font-size:16px}.pill{display:inline-flex;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:900;background:#e8f7ef;color:#05603a}
+.scroll{overflow:auto;padding:14px}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:12px}.field{border:1px solid var(--line);border-radius:12px;padding:10px;background:#fff}.field.full{grid-column:1/-1}.field.two{grid-column:span 2}.label{font-size:11px;text-transform:uppercase;font-weight:900;color:#64748b;margin-bottom:5px}.value{font-size:14px;font-weight:800;color:#0f172a;min-height:20px;word-break:break-word}.empty{color:#94a3b8;font-weight:700}.section{margin:16px 0 10px;color:var(--primary);font-weight:950;border-bottom:1px solid var(--line);padding-bottom:7px}.msg{padding:14px;border-radius:12px;background:#fee2e2;color:var(--danger);font-weight:850}.loading{color:var(--muted);padding:18px}
+@media(max-width:1000px){body{overflow:auto;height:auto}.grid{grid-template-columns:repeat(2,minmax(150px,1fr))}.card{display:block}.scroll{overflow:visible}.field.two{grid-column:span 2}}
+@media(max-width:600px){.grid{grid-template-columns:1fr}.field.two{grid-column:span 1}.top{flex-direction:column}.btn{width:100%}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div>
+      <h1>Meus Dados</h1>
+      <div class="sub">Confira as informações cadastradas no portal.</div>
+    </div>
+    <button class="btn" onclick="carregarDados()">Atualizar</button>
+  </div>
+
+  <div class="alert">
+    Esta tela é apenas para consulta. Se algum dado estiver incorreto ou desatualizado, entre em contato com a unidade ou coordenação responsável.
+  </div>
+
+  <section class="card">
+    <div class="cardhead">
+      <h2>Dados cadastrais</h2>
+      <span id="status" class="pill">Consulta</span>
+    </div>
+    <div id="conteudo" class="scroll loading">Carregando dados...</div>
+  </section>
+</div>
+
+<script>
+const API_BASE='https://apisec.secauxiliar.com.br/prestadores/';
+const $=id=>document.getElementById(id);
+
+function esc(s){return String(s??'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));}
+function val(v){v=String(v??'').trim();return v?esc(v):'<span class="empty">Não informado</span>';}
+function field(label,value,cls=''){
+  return `<div class="field ${cls}"><div class="label">${esc(label)}</div><div class="value">${val(value)}</div></div>`;
+}
+function tel(v){return String(v??'').trim();}
+
+async function carregarDados(){
+  $('conteudo').className='scroll loading';
+  $('conteudo').textContent='Carregando dados...';
+  try{
+    const r=await fetch(API_BASE+'meus_dados_obter.php',{credentials:'include',cache:'no-store'});
+    const j=await r.json();
+    if(!r.ok || !j.ok) throw new Error(j.error||j.message||'Não foi possível carregar seus dados.');
+    const p=j.prestador||{};
+    $('status').textContent=(p.tipo_prestador||'Consulta');
+    $('conteudo').className='scroll';
+    $('conteudo').innerHTML=`
+      <div class="section">Identificação</div>
+      <div class="grid">
+        ${field('Nome',p.nome,'two')}
+        ${field('Tipo',p.tipo_prestador)}
+        ${field('Código antigo',p.ctrl_antigo)}
+        ${field('CPF',p.cpf_formatado||p.cpf)}
+        ${field('RG',p.rg)}
+        ${field('PIS',p.pis)}
+        ${field('Nascimento',p.data_nascimento_br||p.data_nascimento)}
+        ${field('Empresa',p.empresa)}
+        ${field('Funcional',p.funcional)}
+        ${field('Unidade cadastro',p.cod_unidade)}
+      </div>
+
+      <div class="section">Contato</div>
+      <div class="grid">
+        ${field('E-mail',p.email,'two')}
+        ${field('Telefone',tel(p.telefone))}
+        ${field('Celular',tel(p.celular))}
+      </div>
+
+      <div class="section">Endereço</div>
+      <div class="grid">
+        ${field('Endereço',p.endereco,'two')}
+        ${field('Complemento',p.complemento)}
+        ${field('Bairro',p.bairro)}
+        ${field('Cidade',p.cidade)}
+        ${field('UF',p.uf)}
+        ${field('CEP',p.cep_formatado||p.cep)}
+      </div>
+
+      <div class="section">Dados bancários</div>
+      <div class="grid">
+        ${field('Banco',p.banco,'two')}
+        ${field('Agência',p.agencia)}
+        ${field('Conta',p.conta)}
+        ${field('Tipo de conta',p.tipo_conta)}
+      </div>
+    `;
+  }catch(e){
+    $('conteudo').className='scroll';
+    $('conteudo').innerHTML=`<div class="msg">${esc(e.message)}</div>`;
+  }
+}
+carregarDados();
+</script>
+</body>
+</html>
