@@ -27,11 +27,11 @@ main{min-height:calc(100vh - 68px);padding:24px 14px}.wrap{max-width:1080px;marg
 
   <div class="card" id="cardIdentificacao">
     <h3>1. Identificação inicial</h3>
-    <div class="alert">Primeiro informe se você é funcionário do Curso Objetivo ou convidado/prestador externo. Isso ajuda o sistema a classificar corretamente seu cadastro.</div>
+    <div class="alert">Primeiro informe se você é funcionário do grupo Objetivo/Unip ou convidado/prestador externo. Isso ajuda o sistema a classificar corretamente seu cadastro.</div>
 
     <div class="tipoBox">
-      <div id="tipoConvidado" class="tipoCard active" onclick="selecionarTipo('CONVIDADO')"><b>Convidado / Prestador externo</b><span>Use esta opção se você não possui empresa/unidade e matrícula funcional do Curso Objetivo.</span></div>
-      <div id="tipoFuncionario" class="tipoCard" onclick="selecionarTipo('FUNCIONARIO')"><b>Funcionário</b><span>Use esta opção se você possui empresa/unidade e matrícula funcional.</span></div>
+      <div id="tipoConvidado" class="tipoCard active" onclick="selecionarTipo('CONVIDADO')"><b>Convidado</b><span>Use esta opção se você não possui vínculo empregatício com o grupo Objetivo/Unip.</span></div>
+      <div id="tipoFuncionario" class="tipoCard" onclick="selecionarTipo('FUNCIONARIO')"><b>Funcionário</b><span>Use esta opção se você possui funcional do grupo Objetivo/Unip.</span></div>
     </div>
 
     <div class="grid" style="margin-top:12px">
@@ -54,7 +54,7 @@ main{min-height:calc(100vh - 68px);padding:24px 14px}.wrap{max-width:1080px;marg
       <input type="hidden" id="funcional">
       <div class="grid">
         <div class="wide"><label>Nome *</label><input id="nome" required maxlength="150" autocomplete="name"></div>
-        <div><label>CPF *</label><input id="cpf" required readonly></div>
+        <div><label>CPF *</label><input id="cpf" required readonly tabindex="-1"></div>
         <div><label>Data nascimento *</label><input id="data_nascimento" type="date" required></div>
         <div><label>RG *</label><input id="rg" required maxlength="30"></div>
         <div><label>PIS</label><input id="pis" maxlength="30"></div>
@@ -111,7 +111,7 @@ main{min-height:calc(100vh - 68px);padding:24px 14px}.wrap{max-width:1080px;marg
 <div id="modalConfirmar" class="modal hidden">
   <div class="modalbox">
     <h3>Confirmar cadastro</h3>
-    <p class="small">Confira os principais dados antes de concluir. Alterações posteriores deverão ser solicitadas à unidade onde pretende trabalhar ou participar do evento.</p>
+    <p class="small">Confira os dados antes de concluir. Alterações posteriores deverão ser solicitadas à unidade participará dos eventos.</p> 
     <div class="review" id="reviewBox"></div>
     <div class="alert" style="margin-top:12px">Ao confirmar, seu cadastro será salvo e você poderá acessar o portal usando CPF e senha.</div>
     <div id="msgModal" class="msg hidden"></div>
@@ -171,3 +171,5 @@ carregarUnidades();
 </script>
 </body>
 </html>
+
+
