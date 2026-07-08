@@ -17,148 +17,91 @@
   --accent:#2563eb;
   --danger:#b91c1c;
   --success:#166534;
+  --soft:#eef4fb;
 }
 *{box-sizing:border-box}
-body{
-  margin:0;
-  font-family:system-ui,Arial,sans-serif;
-  background:var(--bg);
-  color:var(--ink);
-}
-header.topbar{
-  height:68px;
-  background:var(--primary);
-  color:#fff;
-  display:flex;
-  align-items:center;
-  padding:0 24px;
-  box-shadow:0 2px 10px rgba(16,24,40,.16);
-}
-header.topbar img{
-  height:32px;
-  margin-right:14px;
-}
-header.topbar h1{
-  font-size:18px;
-  margin:0;
-  font-weight:650;
-}
-main{
-  min-height:calc(100vh - 68px);
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  padding:28px 16px;
-}
-.card{
+body{margin:0;font-family:system-ui,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+header.topbar{height:68px;background:var(--primary);color:#fff;display:flex;align-items:center;padding:0 24px;box-shadow:0 2px 10px rgba(16,24,40,.16)}
+header.topbar img{height:32px;margin-right:14px}
+header.topbar h1{font-size:18px;margin:0;font-weight:650}
+main{min-height:calc(100vh - 68px);display:flex;align-items:center;justify-content:center;padding:28px 16px}
+
+.portalBox{
   width:100%;
-  max-width:460px;
+  max-width:860px;
+  display:grid;
+  grid-template-columns:1.05fr .95fr;
+  gap:16px;
+}
+
+.card{
   background:var(--card);
   border:1px solid var(--line);
   border-radius:16px;
   padding:26px;
   box-shadow:0 12px 34px rgba(15,23,42,.08);
 }
-.card h2{
-  margin:0 0 8px;
-  font-size:24px;
-  color:var(--primary);
-}
-.card p{
-  margin:0 0 22px;
-  color:var(--muted);
-  line-height:1.45;
-}
-label{
-  display:block;
-  font-size:14px;
-  font-weight:600;
-  margin:14px 0 6px;
-}
-input{
-  width:100%;
-  padding:12px 13px;
-  border-radius:10px;
-  border:1px solid #d1d5db;
-  font-size:15px;
-}
-button{
-  width:100%;
-  margin-top:18px;
-  padding:13px 16px;
-  border:0;
-  border-radius:10px;
-  background:var(--accent);
-  color:#fff;
-  font-weight:700;
-  cursor:pointer;
-}
+
+.card h2{margin:0 0 8px;font-size:24px;color:var(--primary)}
+.card p{margin:0 0 22px;color:var(--muted);line-height:1.45}
+label{display:block;font-size:14px;font-weight:600;margin:14px 0 6px}
+input{width:100%;padding:12px 13px;border-radius:10px;border:1px solid #d1d5db;font-size:15px}
+button{width:100%;margin-top:18px;padding:13px 16px;border:0;border-radius:10px;background:var(--accent);color:#fff;font-weight:700;cursor:pointer}
 button:hover{filter:brightness(1.05)}
 button:disabled{opacity:.65;cursor:default}
 .hidden{display:none!important}
-.msg{
-  margin-top:14px;
-  padding:12px;
-  border-radius:10px;
-  background:#eef2ff;
-  color:#1e3a8a;
-  font-size:14px;
-}
-.msg.erro{
-  background:#fee2e2;
-  color:var(--danger);
-}
-.msg.ok{
-  background:#dcfce7;
-  color:var(--success);
-}
-.small{
-  margin-top:18px;
-  font-size:13px;
-  color:var(--muted);
-  text-align:center;
+
+.msg{margin-top:14px;padding:12px;border-radius:10px;background:#eef2ff;color:#1e3a8a;font-size:14px}
+.msg.erro{background:#fee2e2;color:var(--danger)}
+.msg.ok{background:#dcfce7;color:var(--success)}
+
+.small{margin-top:16px;font-size:13px;color:var(--muted);text-align:center}
+.btnSec{background:#e5e7eb;color:#111827}
+.btnLink{background:#fff;color:var(--primary);border:1px solid #dbe6f3;margin-top:10px}
+.btnLink:hover{background:#eef4fb;filter:none}
+
+.cardCadastro{
+  background:linear-gradient(180deg,#fff,#f8fbff);
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
 }
 
-/* MODAL */
-.modal{
-  position:fixed;
-  inset:0;
-  background:rgba(15,23,42,.55);
+.cardCadastro .icon{
+  width:48px;
+  height:48px;
+  border-radius:16px;
+  background:var(--soft);
   display:flex;
   align-items:center;
   justify-content:center;
-  padding:18px;
-  z-index:99;
-}
-.modalBox{
-  width:100%;
-  max-width:500px;
-  background:#fff;
-  border-radius:16px;
-  padding:24px;
-  box-shadow:0 20px 60px rgba(0,0,0,.25);
-}
-.modalBox h3{
-  margin:0 0 6px;
   color:var(--primary);
-  font-size:22px;
+  font-size:24px;
+  font-weight:900;
+  margin-bottom:14px;
 }
-.modalBox p{
-  margin:0 0 14px;
+
+.cardCadastro ul{
+  margin:0 0 20px;
+  padding-left:18px;
   color:var(--muted);
-  line-height:1.4;
+  line-height:1.6;
+  font-size:14px;
 }
-.btnSec{
-  background:#e5e7eb;
-  color:#111827;
+
+.cardCadastro .btnCadastro{
+  background:var(--primary);
 }
-.btnLink{
-  background:#fff;
-  color:var(--primary);
-  border:1px solid #dbe6f3;
-  margin-top:10px;
+
+/* MODAL */
+.modal{position:fixed;inset:0;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;padding:18px;z-index:99}
+.modalBox{width:100%;max-width:500px;background:#fff;border-radius:16px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.modalBox h3{margin:0 0 6px;color:var(--primary);font-size:22px}
+.modalBox p{margin:0 0 14px;color:var(--muted);line-height:1.4}
+
+@media(max-width:800px){
+  .portalBox{grid-template-columns:1fr;max-width:460px}
 }
-.btnLink:hover{background:#eef4fb;filter:none}
 </style>
 </head>
 
@@ -169,41 +112,54 @@ button:disabled{opacity:.65;cursor:default}
 </header>
 
 <main>
-  <section class="card">
-    <h2>Acesso ao Portal</h2>
-    <p>
-      Área exclusiva para convidados e prestadores que participaram de eventos avulsos do Curso Objetivo.
-    </p>
+  <div class="portalBox">
 
-    <div id="etapaCpf">
-      <label for="cpf">CPF</label>
-      <input id="cpf" placeholder="Digite seu CPF" inputmode="numeric" autocomplete="username">
-      <button id="btnCpf">Continuar</button>
-    </div>
+    <section class="card">
+      <h2>Acesso ao Portal</h2>
+      <p>Entre com seu CPF para consultar histórico, recibos, informes e dados cadastrais.</p>
 
-    <div id="etapaSenha" class="hidden">
-      <label for="senhaLogin">Senha</label>
-      <input id="senhaLogin" type="password" placeholder="Digite sua senha" autocomplete="current-password">
-      <button id="btnLogin">Entrar</button>
-      <button id="btnEsqueciSenha" type="button" class="btnLink hidden">Esqueci minha senha</button>
-    </div>
+      <div id="etapaCpf">
+        <label for="cpf">CPF</label>
+        <input id="cpf" placeholder="Digite seu CPF" inputmode="numeric" autocomplete="username">
+        <button id="btnCpf">Continuar</button>
+      </div>
 
-    <div id="etapaFuncional" class="hidden">
-      <label for="empresa">Empresa / unidade</label>
-      <input id="empresa" placeholder="Ex.: 1501" inputmode="numeric">
+      <div id="etapaSenha" class="hidden">
+        <label for="senhaLogin">Senha</label>
+        <input id="senhaLogin" type="password" placeholder="Digite sua senha" autocomplete="current-password">
+        <button id="btnLogin">Entrar</button>
+        <button id="btnEsqueciSenha" type="button" class="btnLink hidden">Esqueci minha senha</button>
+      </div>
 
-      <label for="funcional">Funcional</label>
-      <input id="funcional" placeholder="Digite seu funcional" inputmode="numeric">
+      <div id="etapaFuncional" class="hidden">
+        <label for="empresa">Empresa / unidade</label>
+        <input id="empresa" placeholder="Ex.: 1501" inputmode="numeric">
 
-      <button id="btnFuncional">Localizar cadastro</button>
-    </div>
+        <label for="funcional">Funcional</label>
+        <input id="funcional" placeholder="Digite seu funcional" inputmode="numeric">
 
-    <div id="retorno" class="msg hidden"></div>
+        <button id="btnFuncional">Localizar cadastro</button>
+      </div>
 
-    <div class="small">
-      Primeiro acesso? Informe seu CPF para localizar seu cadastro.
-    </div>
-  </section>
+      <div id="retorno" class="msg hidden"></div>
+    </section>
+
+    <section class="card cardCadastro">
+      <div class="icon">+</div>
+      <h2>Primeiro acesso?</h2>
+      <p>Ainda não possui cadastro? Cadastre seus dados para participar dos eventos e coberturas do Curso Objetivo.</p>
+
+      <ul>
+        <li>Preencha seus dados pessoais</li>
+        <li>Informe endereço e dados bancários</li>
+        <li>Escolha a unidade responsável</li>
+        <li>Crie sua senha de acesso</li>
+      </ul>
+
+      <button class="btnCadastro" onclick="location.href='cadastro_prestador.html'">Fazer cadastro</button>
+    </section>
+
+  </div>
 </main>
 
 <div id="modalCadastro" class="modal hidden">
@@ -398,7 +354,6 @@ async function fazerLogin(){
     el('btnLogin').disabled = false;
   }
 }
-
 
 async function esqueciSenha(){
   const cpf = cpfAtual || onlyDigits(el('cpf').value);
