@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meus Eventos - Portal dos Convidados</title>
+  <style>
+    :root{--azul:#073f80;--azul2:#0d4f98;--fundo:#f3f6fa;--linha:#d9e2ec;--texto:#16324f;--muted:#64748b;--verde:#16794a;--vermelho:#b42318;--amarelo:#9a6700}
+    *{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--fundo);color:var(--texto)}
+    .topo{height:58px;background:var(--azul);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 22px;font-weight:700}.topo a{color:#fff;text-decoration:none}.sair{background:#fee2e2;color:#8a1c1c;border:0;border-radius:9px;padding:9px 14px;font-weight:700;cursor:pointer}
+    .layout{display:grid;grid-template-columns:230px 1fr;min-height:calc(100vh - 58px)}.menu{background:#fff;border-right:1px solid var(--linha);padding:16px}.perfil{background:#eaf2fb;border:1px solid #d3e1f1;border-radius:12px;padding:14px;margin-bottom:12px}.perfil strong{display:block;color:var(--azul);margin-bottom:6px}.nav a{display:block;padding:12px;border-radius:10px;text-decoration:none;color:#0b315f;font-weight:700;margin-bottom:6px}.nav a small{display:block;font-weight:400;color:#5d7188;margin-top:3px}.nav a.ativo,.nav a:hover{background:#eaf2fb}
+    main{padding:18px}.card{background:#fff;border:1px solid var(--linha);border-radius:14px;padding:18px;box-shadow:0 2px 8px rgba(15,23,42,.04)}h1{margin:0 0 4px;color:var(--azul)}.sub{margin:0 0 18px;color:var(--muted)}
+    .lista{display:grid;gap:12px}.evento{border:1px solid var(--linha);border-radius:13px;padding:16px}.evento.hoje{border:2px solid #2b78c5;background:#f7fbff}.linha{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}.titulo{font-size:18px;font-weight:800;color:#0a3d75}.data{font-weight:700;margin-top:5px}.detalhes{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:10px;margin-top:13px}.detalhe{background:#f7f9fc;border-radius:9px;padding:10px}.detalhe span{display:block;font-size:12px;color:var(--muted);margin-bottom:3px}.badge{display:inline-block;border-radius:999px;padding:6px 10px;font-size:12px;font-weight:800}.b-confirmado{background:#dcfce7;color:#166534}.b-pendente{background:#fef3c7;color:#92400e}.b-recusou{background:#fee2e2;color:#991b1b}.b-cancelado{background:#e5e7eb;color:#374151}
+    .acoes{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:14px}.btn{border:0;border-radius:10px;padding:11px 16px;font-weight:800;cursor:pointer}.entrada{background:#15803d;color:#fff}.saida{background:#b42318;color:#fff}.btn:disabled{opacity:.6;cursor:not-allowed}.status-presenca{font-weight:700;color:#3f5872}.msg{padding:12px;border-radius:10px;margin-bottom:14px}.erro{background:#fee2e2;color:#991b1b}.ok{background:#dcfce7;color:#166534}.vazio{padding:28px;text-align:center;color:var(--muted)}
+    @media(max-width:800px){.layout{grid-template-columns:1fr}.menu{border-right:0;border-bottom:1px solid var(--linha)}.nav{display:grid;grid-template-columns:1fr 1fr;gap:5px}.detalhes{grid-template-columns:1fr 1fr}.linha{flex-direction:column}main{padding:12px}}
+  </style>
+</head>
+<body>
+  <header class="topo"><a href="painel.html">➤➤ Portal dos Convidados</a><button class="sair" onclick="sair()">Sair</button></header>
+  <div class="layout">
+    <aside class="menu">
+      <div class="perfil"><strong id="nomeUsuario">Portal dos Convidados</strong><span>Eventos e presenças</span></div>
+      <nav class="nav">
+        <a href="painel.html">Início<small>Resumo do portal</small></a>
+        <a class="ativo" href="meus_eventos.html">Meus Eventos<small>Agenda, entrada e saída</small></a>
+        <a href="painel.html#pagamentos">Histórico de Pagamentos<small>Eventos, funções e valores</small></a>
+        <a href="painel.html#recibos">Recibos<small>Pagamentos para o holerite</small></a>
+        <a href="painel.html#informe">Informe de Rendimentos<small>Consolidação anual</small></a>
+        <a href="painel.html#dados">Meus Dados<small>Conferência cadastral</small></a>
+      </nav>
+    </aside>
+    <main>
+      <section class="card">
+        <h1>Meus Eventos</h1>
+        <p class="sub">Consulte sua agenda e registre entrada e saída no dia do evento.</p>
+        <div id="mensagem"></div>
+        <div id="lista" class="lista"><div class="vazio">Carregando eventos...</div></div>
+      </section>
+    </main>
+  </div>
+<script>
+const API_BASE = 'https://apisec.secauxiliar.com.br/prestadores';
+const lista = document.getElementById('lista');
+const mensagem = document.getElementById('mensagem');
+
+function esc(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
+function dataBR(v){if(!v)return '-';const [a,m,d]=v.split('-');return `${d}/${m}/${a}`;}
+function hora(v){return v ? String(v).slice(0,5) : '-';}
+function dataHora(v){if(!v)return '-';const d=new Date(String(v).replace(' ','T'));return Number.isNaN(d.getTime())?v:d.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'});}
+function badge(status){const mapa={CONFIRMADO:'b-confirmado',PENDENTE:'b-pendente',RECUSOU:'b-recusou',CANCELADO:'b-cancelado'};return `<span class="badge ${mapa[status]||'b-cancelado'}">${esc(status)}</span>`;}
+function mostrar(texto,tipo='ok'){mensagem.innerHTML=`<div class="msg ${tipo}">${esc(texto)}</div>`;setTimeout(()=>mensagem.innerHTML='',5000);}
+
+async function api(arquivo,opcoes={}){
+  const r=await fetch(`${API_BASE}/${arquivo}`,{credentials:'include',...opcoes});
+  const d=await r.json().catch(()=>({ok:false,error:'Resposta inválida do servidor.'}));
+  if(r.status===401){location.href='index.html';throw new Error('Sessão expirada.');}
+  return d;
+}
+
+function render(eventos){
+  if(!eventos.length){lista.innerHTML='<div class="vazio">Nenhum evento encontrado para o seu cadastro.</div>';return;}
+  lista.innerHTML=eventos.map(e=>{
+    let acao='';
+    if(e.pode_registrar && e.presenca_status==='NAO_INICIADA') acao=`<button class="btn entrada" onclick="registrar(${e.evento_id},'ENTRADA',this)">Registrar entrada</button>`;
+    else if(e.pode_registrar && e.presenca_status==='EM_ANDAMENTO') acao=`<button class="btn saida" onclick="registrar(${e.evento_id},'SAIDA',this)">Registrar saída</button>`;
+
+    let presenca='Presença ainda não iniciada.';
+    if(e.presenca_status==='EM_ANDAMENTO') presenca=`Entrada registrada em ${dataHora(e.entrada_em)}.`;
+    if(e.presenca_status==='CONCLUIDA') presenca=`Concluído: entrada ${dataHora(e.entrada_em)} · saída ${dataHora(e.saida_em)}.`;
+    if(!e.eh_hoje && e.presenca_status==='NAO_INICIADA') presenca=`Registro disponível somente em ${dataBR(e.data_evento)}.`;
+
+    return `<article class="evento ${e.eh_hoje?'hoje':''}">
+      <div class="linha"><div><div class="titulo">${esc(e.titulo)}</div><div class="data">${dataBR(e.data_evento)} · ${hora(e.hora_inicio)} às ${hora(e.hora_fim)}</div></div>${badge(e.evento_status==='CANCELADO'?'CANCELADO':e.convocacao_status)}</div>
+      <div class="detalhes">
+        <div class="detalhe"><span>Posto</span><strong>${esc(e.posto||'-')}</strong></div>
+        <div class="detalhe"><span>Sala</span><strong>${esc(e.sala||'-')}</strong></div>
+        <div class="detalhe"><span>Unidade</span><strong>${esc(e.cod_unidade||'-')}</strong></div>
+        <div class="detalhe"><span>Quantidade</span><strong>${esc(e.quantidade||'-')}</strong></div>
+      </div>
+      <div class="acoes"><span class="status-presenca">${esc(presenca)}</span>${acao}</div>
+    </article>`;
+  }).join('');
+}
+
+async function carregar(){
+  try{const d=await api('meus_eventos.php');if(!d.ok)throw new Error(d.error||'Erro ao carregar.');render(d.eventos||[]);}catch(e){lista.innerHTML=`<div class="msg erro">${esc(e.message)}</div>`;}
+}
+
+function obterLocalizacao(){
+  return new Promise((resolve,reject)=>{
+    if(!navigator.geolocation){reject(new Error('Este aparelho não oferece localização pelo navegador.'));return;}
+    navigator.geolocation.getCurrentPosition(resolve,err=>{
+      const msgs={1:'Autorize o uso da localização para registrar a presença.',2:'Não foi possível obter sua localização.',3:'A localização demorou para responder. Tente novamente.'};
+      reject(new Error(msgs[err.code]||'Erro ao acessar a localização.'));
+    },{enableHighAccuracy:true,timeout:20000,maximumAge:0});
+  });
+}
+
+async function registrar(eventoId,acao,botao){
+  const texto=acao==='ENTRADA'?'entrada':'saída';
+  if(!confirm(`Confirmar o registro de ${texto} usando a localização atual do celular?`))return;
+  botao.disabled=true;botao.textContent='Obtendo GPS...';
+  try{
+    const pos=await obterLocalizacao();
+    botao.textContent='Registrando...';
+    const d=await api('registrar_presenca.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({evento_id:eventoId,acao,latitude:pos.coords.latitude,longitude:pos.coords.longitude,precisao:pos.coords.accuracy})});
+    if(!d.ok)throw new Error(d.error||'Não foi possível registrar.');
+    mostrar(d.message||'Registro realizado.');
+    await carregar();
+  }catch(e){mostrar(e.message,'erro');botao.disabled=false;botao.textContent=acao==='ENTRADA'?'Registrar entrada':'Registrar saída';}
+}
+
+async function sair(){
+  try{await fetch(`${API_BASE}/logout.php`,{method:'POST',credentials:'include'});}catch(e){}
+  location.href='index.html';
+}
+carregar();
+</script>
+</body>
+</html>
