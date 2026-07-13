@@ -89,7 +89,7 @@
 
     .detalhes {
       display: grid;
-      grid-template-columns: repeat(4, minmax(120px, 1fr));
+      grid-template-columns: repeat(2, minmax(160px, 1fr));
       gap: 10px;
       margin-top: 13px;
     }
@@ -229,7 +229,7 @@
     <h1>Meus Eventos</h1>
 
     <p class="sub">
-      Consulte sua agenda e registre entrada e saída no dia do evento.
+      Consulte sua agenda e acompanhe as orientações de presença de cada evento.
     </p>
 
     <div id="mensagem"></div>
@@ -347,10 +347,13 @@
 
       lista.innerHTML = eventos
         .map((e) => {
+          const temPosto = String(e.posto ?? '').trim() !== '';
+
           let acao = '';
 
           if (
-            e.pode_registrar
+            temPosto
+            && e.pode_registrar
             && e.presenca_status === 'NAO_INICIADA'
           ) {
             acao = `
@@ -362,7 +365,8 @@
               </button>
             `;
           } else if (
-            e.pode_registrar
+            temPosto
+            && e.pode_registrar
             && e.presenca_status === 'EM_ANDAMENTO'
           ) {
             acao = `
@@ -375,7 +379,9 @@
             `;
           }
 
-          let presenca = 'Presença ainda não iniciada.';
+          let presenca = temPosto
+            ? 'Presença ainda não iniciada.'
+            : 'A presença deste evento será registrada na lista da unidade.';
 
           if (e.presenca_status === 'EM_ANDAMENTO') {
             presenca = `
@@ -391,7 +397,8 @@
           }
 
           if (
-            !e.eh_hoje
+            temPosto
+            && !e.eh_hoje
             && e.presenca_status === 'NAO_INICIADA'
           ) {
             presenca = `
@@ -430,18 +437,8 @@
                 </div>
 
                 <div class="detalhe">
-                  <span>Sala</span>
-                  <strong>${esc(e.sala || '-')}</strong>
-                </div>
-
-                <div class="detalhe">
                   <span>Unidade</span>
                   <strong>${esc(e.cod_unidade || '-')}</strong>
-                </div>
-
-                <div class="detalhe">
-                  <span>Quantidade</span>
-                  <strong>${esc(e.quantidade || '-')}</strong>
                 </div>
               </div>
 
@@ -517,6 +514,10 @@
     }
 
     async function registrar(eventoId, acao, botao) {
+      if (!botao) {
+        return;
+      }
+
       const texto =
         acao === 'ENTRADA'
           ? 'entrada'
