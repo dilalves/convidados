@@ -649,6 +649,12 @@
       return d;
     }
 
+    function canvasParaBlob(canvas, qualidade) {
+      return new Promise((resolve) => {
+        canvas.toBlob(resolve, 'image/webp', qualidade);
+      });
+    }
+
     function comprimirImagem(arquivo) {
       return new Promise((resolve, reject) => {
         const imagem = new Image();
@@ -656,44 +662,68 @@
 
         imagem.onload = async () => {
           try {
-            const maxLado = 1600;
-            let largura = imagem.naturalWidth;
-            let altura = imagem.naturalHeight;
+            const limiteBytes = 1572864; // 1,5 MB
+            const menorLadoPermitido = 900;
+            let maiorLado = 1600;
+            let qualidade = 0.80;
+            let blobFinal = null;
 
-            if (largura > maxLado || altura > maxLado) {
-              const escala = Math.min(maxLado / largura, maxLado / altura);
-              largura = Math.round(largura * escala);
-              altura = Math.round(altura * escala);
-            }
+            while (maiorLado >= menorLadoPermitido) {
+              let largura = imagem.naturalWidth;
+              let altura = imagem.naturalHeight;
 
-            const canvas = document.createElement('canvas');
-            canvas.width = largura;
-            canvas.height = altura;
+              if (largura > maiorLado || altura > maiorLado) {
+                const escala = Math.min(
+                  maiorLado / largura,
+                  maiorLado / altura
+                );
 
-            const ctx = canvas.getContext('2d', { alpha: false });
-            ctx.drawImage(imagem, 0, 0, largura, altura);
-
-            const blob = await new Promise((ok) => {
-              canvas.toBlob(ok, 'image/webp', 0.78);
-            });
-
-            if (!blob) {
-              throw new Error('Não foi possível comprimir a foto.');
-            }
-
-            if (blob.size > 1572864) {
-              const menor = await new Promise((ok) => {
-                canvas.toBlob(ok, 'image/webp', 0.62);
-              });
-
-              if (!menor || menor.size > 1572864) {
-                throw new Error('A foto ficou grande demais mesmo após a compressão.');
+                largura = Math.max(1, Math.round(largura * escala));
+                altura = Math.max(1, Math.round(altura * escala));
               }
 
-              resolve(menor);
-            } else {
-              resolve(blob);
+              const canvas = document.createElement('canvas');
+              canvas.width = largura;
+              canvas.height = altura;
+
+              const ctx = canvas.getContext('2d', { alpha: false });
+
+              if (!ctx) {
+                throw new Error('Não foi possível preparar a imagem.');
+              }
+
+              ctx.fillStyle = '#ffffff';
+              ctx.fillRect(0, 0, largura, altura);
+              ctx.drawImage(imagem, 0, 0, largura, altura);
+
+              qualidade = 0.80;
+
+              while (qualidade >= 0.42) {
+                const blob = await canvasParaBlob(canvas, qualidade);
+
+                if (!blob) {
+                  throw new Error('Não foi possível comprimir a foto.');
+                }
+
+                blobFinal = blob;
+
+                if (blob.size <= limiteBytes) {
+                  resolve(blob);
+                  return;
+                }
+
+                qualidade -= 0.08;
+              }
+
+              maiorLado -= 200;
             }
+
+            if (blobFinal) {
+              resolve(blobFinal);
+              return;
+            }
+
+            throw new Error('Não foi possível preparar esta foto.');
           } catch (e) {
             reject(e);
           } finally {
