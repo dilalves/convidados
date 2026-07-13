@@ -193,6 +193,107 @@
       color: var(--muted);
     }
 
+
+    .evidencias {
+      width: 100%;
+      margin-top: 12px;
+      border: 1px solid #cfe0f3;
+      background: #f8fbff;
+      border-radius: 12px;
+      padding: 12px;
+    }
+
+    .evidencias-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .evidencias-head strong {
+      color: var(--azul);
+    }
+
+    .contador-fotos {
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--muted);
+    }
+
+    .foto-form {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: end;
+    }
+
+    .foto-form input[type="text"] {
+      width: 100%;
+      min-height: 42px;
+      border: 1px solid var(--linha);
+      border-radius: 10px;
+      padding: 0 11px;
+      font-weight: 700;
+    }
+
+    .foto-input {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .btn-foto {
+      background: #0b5cab;
+      color: #fff;
+    }
+
+    .galeria-evidencias {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(90px, 1fr));
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .foto-item {
+      position: relative;
+      border: 1px solid var(--linha);
+      border-radius: 10px;
+      overflow: hidden;
+      background: #fff;
+      aspect-ratio: 1 / 1;
+    }
+
+    .foto-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .foto-excluir {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      border: 0;
+      border-radius: 999px;
+      width: 28px;
+      height: 28px;
+      background: rgba(153, 27, 27, .92);
+      color: #fff;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .foto-status {
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
     @media (max-width: 800px) {
       body {
         padding: 10px;
@@ -219,6 +320,14 @@
 
       .btn {
         width: 100%;
+      }
+
+      .foto-form {
+        grid-template-columns: 1fr;
+      }
+
+      .galeria-evidencias {
+        grid-template-columns: repeat(3, 1fr);
       }
     }
   </style>
@@ -449,10 +558,275 @@
 
                 ${acao}
               </div>
+
+              ${
+                temPosto && e.presenca_status === 'EM_ANDAMENTO'
+                  ? `
+                    <section class="evidencias" id="evidencias-${e.evento_id}">
+                      <div class="evidencias-head">
+                        <strong>📷 Evidências da cobertura</strong>
+                        <span class="contador-fotos" id="contador-${e.evento_id}">
+                          Carregando...
+                        </span>
+                      </div>
+
+                      <div class="foto-form">
+                        <input
+                          id="legenda-${e.evento_id}"
+                          type="text"
+                          maxlength="180"
+                          placeholder="Legenda opcional: portaria, fluxo, cartazes..."
+                        >
+
+                        <div>
+                          <input
+                            class="foto-input"
+                            id="foto-${e.evento_id}"
+                            type="file"
+                            accept="image/*"
+                            capture="environment"
+                            onchange="enviarFoto(${e.evento_id}, this)"
+                          >
+
+                          <button
+                            type="button"
+                            class="btn btn-foto"
+                            onclick="document.getElementById('foto-${e.evento_id}').click()"
+                          >
+                            Tirar ou escolher foto
+                          </button>
+                        </div>
+                      </div>
+
+                      <div
+                        class="galeria-evidencias"
+                        id="galeria-${e.evento_id}"
+                      ></div>
+
+                      <div class="foto-status" id="foto-status-${e.evento_id}">
+                        Envie até 5 imagens durante a cobertura.
+                      </div>
+                    </section>
+                  `
+                  : ''
+              }
             </article>
           `;
         })
         .join('');
+
+      eventos.forEach((e) => {
+        const temPosto = String(e.posto ?? '').trim() !== '';
+
+        if (temPosto && e.presenca_status === 'EM_ANDAMENTO') {
+          carregarEvidencias(e.evento_id);
+        }
+      });
+    }
+
+
+    async function apiForm(arquivo, formData) {
+      const r = await fetch(
+        `${API_BASE}/${arquivo}`,
+        {
+          method: 'POST',
+          credentials: 'include',
+          cache: 'no-store',
+          body: formData
+        }
+      );
+
+      const d = await r.json().catch(() => ({
+        ok: false,
+        error: 'Resposta inválida do servidor.'
+      }));
+
+      if (r.status === 401) {
+        window.top.location.href = 'index.html';
+        throw new Error('Sessão expirada.');
+      }
+
+      return d;
+    }
+
+    function comprimirImagem(arquivo) {
+      return new Promise((resolve, reject) => {
+        const imagem = new Image();
+        const url = URL.createObjectURL(arquivo);
+
+        imagem.onload = async () => {
+          try {
+            const maxLado = 1600;
+            let largura = imagem.naturalWidth;
+            let altura = imagem.naturalHeight;
+
+            if (largura > maxLado || altura > maxLado) {
+              const escala = Math.min(maxLado / largura, maxLado / altura);
+              largura = Math.round(largura * escala);
+              altura = Math.round(altura * escala);
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = largura;
+            canvas.height = altura;
+
+            const ctx = canvas.getContext('2d', { alpha: false });
+            ctx.drawImage(imagem, 0, 0, largura, altura);
+
+            const blob = await new Promise((ok) => {
+              canvas.toBlob(ok, 'image/webp', 0.78);
+            });
+
+            if (!blob) {
+              throw new Error('Não foi possível comprimir a foto.');
+            }
+
+            if (blob.size > 1572864) {
+              const menor = await new Promise((ok) => {
+                canvas.toBlob(ok, 'image/webp', 0.62);
+              });
+
+              if (!menor || menor.size > 1572864) {
+                throw new Error('A foto ficou grande demais mesmo após a compressão.');
+              }
+
+              resolve(menor);
+            } else {
+              resolve(blob);
+            }
+          } catch (e) {
+            reject(e);
+          } finally {
+            URL.revokeObjectURL(url);
+          }
+        };
+
+        imagem.onerror = () => {
+          URL.revokeObjectURL(url);
+          reject(new Error('Não foi possível abrir a foto.'));
+        };
+
+        imagem.src = url;
+      });
+    }
+
+    async function carregarEvidencias(eventoId) {
+      const contador = document.getElementById(`contador-${eventoId}`);
+      const galeria = document.getElementById(`galeria-${eventoId}`);
+
+      if (!contador || !galeria) {
+        return;
+      }
+
+      try {
+        const d = await api(`listar_evidencias.php?evento_id=${eventoId}`);
+
+        if (!d.ok) {
+          throw new Error(d.error || 'Erro ao listar fotos.');
+        }
+
+        const fotos = d.fotos || [];
+        contador.textContent = `${fotos.length} de ${d.limite || 5} fotos`;
+
+        galeria.innerHTML = fotos.map((foto) => `
+          <div class="foto-item">
+            <img
+              src="${esc(foto.url)}"
+              alt="${esc(foto.legenda || 'Evidência da cobertura')}"
+              loading="lazy"
+            >
+            <button
+              type="button"
+              class="foto-excluir"
+              title="Excluir foto"
+              onclick="excluirFoto(${foto.id}, ${eventoId})"
+            >×</button>
+          </div>
+        `).join('');
+      } catch (e) {
+        contador.textContent = 'Erro ao carregar';
+      }
+    }
+
+    async function enviarFoto(eventoId, input) {
+      const arquivo = input.files?.[0];
+
+      if (!arquivo) {
+        return;
+      }
+
+      const status = document.getElementById(`foto-status-${eventoId}`);
+      const legenda = document.getElementById(`legenda-${eventoId}`);
+
+      input.disabled = true;
+      status.textContent = 'Comprimindo a imagem...';
+
+      try {
+        const blob = await comprimirImagem(arquivo);
+        status.textContent = 'Obtendo localização...';
+
+        const pos = await obterLocalizacao();
+
+        const form = new FormData();
+        form.append('evento_id', String(eventoId));
+        form.append('legenda', legenda?.value?.trim() || '');
+        form.append('latitude', String(pos.coords.latitude));
+        form.append('longitude', String(pos.coords.longitude));
+        form.append('precisao', String(pos.coords.accuracy));
+        form.append(
+          'foto',
+          new File([blob], `cobertura-${Date.now()}.webp`, {
+            type: 'image/webp'
+          })
+        );
+
+        status.textContent = 'Enviando para o servidor...';
+
+        const d = await apiForm('upload_evidencia.php', form);
+
+        if (!d.ok) {
+          throw new Error(d.error || 'Não foi possível enviar a foto.');
+        }
+
+        if (legenda) {
+          legenda.value = '';
+        }
+
+        mostrar(d.message || 'Foto enviada.');
+        await carregarEvidencias(eventoId);
+        status.textContent = 'Foto enviada com sucesso.';
+      } catch (e) {
+        mostrar(e.message, 'erro');
+        status.textContent = e.message;
+      } finally {
+        input.value = '';
+        input.disabled = false;
+      }
+    }
+
+    async function excluirFoto(id, eventoId) {
+      if (!confirm('Excluir esta foto?')) {
+        return;
+      }
+
+      try {
+        const d = await api('excluir_evidencia.php', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ id })
+        });
+
+        if (!d.ok) {
+          throw new Error(d.error || 'Não foi possível excluir.');
+        }
+
+        mostrar(d.message || 'Foto excluída.');
+        await carregarEvidencias(eventoId);
+      } catch (e) {
+        mostrar(e.message, 'erro');
+      }
     }
 
     async function carregar() {
