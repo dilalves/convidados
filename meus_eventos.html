@@ -294,6 +294,70 @@
       font-weight: 700;
     }
 
+
+    .cobertura-box {
+      width: 100%;
+      margin-top: 12px;
+      border-top: 1px solid #dbe7f4;
+      padding-top: 12px;
+    }
+
+    .cobertura-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .cobertura-head strong {
+      color: var(--azul);
+    }
+
+    .contador-cobertura {
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--muted);
+    }
+
+    .cobertura-form {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: end;
+    }
+
+    .cobertura-form textarea {
+      width: 100%;
+      min-height: 78px;
+      resize: vertical;
+      border: 1px solid var(--linha);
+      border-radius: 10px;
+      padding: 10px 11px;
+      font: inherit;
+      font-weight: 700;
+      color: var(--texto);
+      background: #fff;
+    }
+
+    .cobertura-form textarea:focus {
+      outline: 2px solid rgba(11, 92, 171, 0.18);
+      border-color: #0b5cab;
+    }
+
+    .btn-cobertura {
+      background: #16794a;
+      color: #fff;
+      min-width: 145px;
+    }
+
+    .cobertura-status {
+      margin-top: 7px;
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
     @media (max-width: 800px) {
       body {
         padding: 10px;
@@ -324,6 +388,14 @@
 
       .foto-form {
         grid-template-columns: 1fr;
+      }
+
+      .cobertura-form {
+        grid-template-columns: 1fr;
+      }
+
+      .btn-cobertura {
+        width: 100%;
       }
 
       .galeria-evidencias {
@@ -606,6 +678,43 @@
                       <div class="foto-status" id="foto-status-${e.evento_id}">
                         Envie até 5 imagens durante a cobertura.
                       </div>
+
+                      <div class="cobertura-box">
+                        <div class="cobertura-head">
+                          <strong>Concorrentes observados</strong>
+
+                          <span
+                            class="contador-cobertura"
+                            id="contador-cobertura-${e.evento_id}"
+                          >
+                            ${String(e.cobertura ?? '').length}/200
+                          </span>
+                        </div>
+
+                        <div class="cobertura-form">
+                          <textarea
+                            id="cobertura-${e.evento_id}"
+                            maxlength="200"
+                            placeholder="Ex.: UNIP, ANGLO, POLIEDRO, ETAPA..."
+                            oninput="atualizarContadorCobertura(${e.evento_id})"
+                          >${esc(e.cobertura || '')}</textarea>
+
+                          <button
+                            type="button"
+                            class="btn btn-cobertura"
+                            onclick="salvarCobertura(${e.evento_id}, this)"
+                          >
+                            Salvar cobertura
+                          </button>
+                        </div>
+
+                        <div
+                          class="cobertura-status"
+                          id="cobertura-status-${e.evento_id}"
+                        >
+                          Informe ou acrescente os concorrentes identificados neste posto.
+                        </div>
+                      </div>
                     </section>
                   `
                   : ''
@@ -856,6 +965,72 @@
         await carregarEvidencias(eventoId);
       } catch (e) {
         mostrar(e.message, 'erro');
+      }
+    }
+
+
+    function atualizarContadorCobertura(eventoId) {
+      const campo = document.getElementById(`cobertura-${eventoId}`);
+      const contador = document.getElementById(
+        `contador-cobertura-${eventoId}`
+      );
+
+      if (!campo || !contador) {
+        return;
+      }
+
+      contador.textContent = `${campo.value.length}/200`;
+    }
+
+    async function salvarCobertura(eventoId, botao) {
+      const campo = document.getElementById(`cobertura-${eventoId}`);
+      const status = document.getElementById(
+        `cobertura-status-${eventoId}`
+      );
+
+      if (!campo || !botao || !status) {
+        return;
+      }
+
+      const cobertura = campo.value.trim();
+
+      botao.disabled = true;
+      botao.textContent = 'Salvando...';
+      status.textContent = 'Enviando informações...';
+
+      try {
+        const d = await api('salvar_cobertura.php', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            evento_id: eventoId,
+            cobertura
+          })
+        });
+
+        if (!d.ok) {
+          throw new Error(
+            d.error || 'Não foi possível salvar a cobertura.'
+          );
+        }
+
+        campo.value = d.cobertura ?? cobertura;
+        atualizarContadorCobertura(eventoId);
+
+        status.textContent =
+          d.message || 'Cobertura salva com sucesso.';
+
+        mostrar(
+          d.message || 'Cobertura salva com sucesso.'
+        );
+      } catch (e) {
+        status.textContent = e.message;
+        mostrar(e.message, 'erro');
+      } finally {
+        botao.disabled = false;
+        botao.textContent = 'Salvar cobertura';
       }
     }
 
